@@ -168,6 +168,7 @@ SET(forces_SOURCES
 	Forces/Metadynamics/LTAtanCOMTrap.cpp
 	Forces/Metadynamics/meta_utils.cpp
 	Forces/AttractionPlane.cpp
+	Forces/CrooksTrap.cpp
 
 )
 
