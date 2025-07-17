@@ -16,9 +16,9 @@ void appendBufferToFile(const std::string& filename, number* buffer, int step) {
 
     if (outputFile.is_open()) {
         number _running = 0.;
-        for (int i = 0; i < 100000; ++i) {
+        for (int i = 0; i < 100000; i++) {
             _running += buffer[i];
-            if (i % step != 0 && i != 0){
+            if ((i+1) % (step) == 0){
                 outputFile << _running << std::endl;
                 _running = 0.;
             } 
@@ -56,7 +56,7 @@ std::tuple<std::vector<int>, std::string> CrooksTrap::init(input_file &inp) {
     _stiff_rate = 0.f; //default stiff_rate is 0
     getInputNumber(&inp, "stiff_rate", &_stiff_rate, 0);
     getInputString(&inp, "file_path", _file_path, 1);
-    _sum_steps = 0; //default stiff_rate is 0
+    _sum_steps = 1; //default stiff_rate is 0
     getInputInt(&inp, "sum_steps", &_sum_steps, 0);
 
     int N = CONFIG_INFO->particles().size();
