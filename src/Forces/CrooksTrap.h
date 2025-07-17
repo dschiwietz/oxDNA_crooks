@@ -26,6 +26,7 @@ public:
     number _rate;
     number _stiff_rate;
     string _file_path;
+    int _sum_steps;
     bool PBC;
 
     CrooksTrap();
