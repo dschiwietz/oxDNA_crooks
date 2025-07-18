@@ -16,9 +16,6 @@ class CrooksTrap: public BaseForce {
 private:
     int _particle;
     int _ref_id;
-    static number _work_buffer[100000];
-    static bool saved_last_step;
-    llint last_step;
 
 public:
     BaseParticle * _p_ptr;
@@ -26,6 +23,10 @@ public:
     number _rate;
     number _stiff_rate;
     string _file_path;
+    number _force_buffer[100000];
+    number _extension_buffer[100000];
+    bool saved_last_step;
+    llint last_step;
     int _sum_steps;
     bool PBC;
 

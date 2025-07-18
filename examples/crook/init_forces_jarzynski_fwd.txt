@@ -2,7 +2,7 @@
     type = trap
     particle = 0
     pos0 = 5., 5., 5.
-    stiff = 5.
+    stiff = 1.
     rate = 0.
     dir = 1.,0.,0.
 }
@@ -12,7 +12,7 @@
     particle = 19
     ref_particle = 0
     r0 = 1.2
-    stiff = 5.
+    stiff = 1.
     rate = 0.00000002
     file_path = work_fwd.txt
     sum_steps = 100

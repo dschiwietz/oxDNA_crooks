@@ -8,19 +8,23 @@
 #include "CrooksTrap.h"
 #include "../Particles/BaseParticle.h"
 #include "../Boxes/BaseBox.h"
+#include <iomanip>
 
 #include <fstream>   // For std::ofstream
 
-void appendBufferToFile(const std::string& filename, number* buffer, int step) {
+void appendBufferToFile(const std::string& filename, number* force_buffer, number* extension_buffer, int step) {
     std::ofstream outputFile(filename, std::ios::app);
 
     if (outputFile.is_open()) {
-        number _running = 0.;
+        number _running_force = 0.;
+        number _running_extension = 0.;
         for (int i = 0; i < 100000; i++) {
-            _running += buffer[i];
+            _running_force += force_buffer[i];
+            _running_extension += extension_buffer[i];
             if ((i+1) % (step) == 0){
-                outputFile << _running << std::endl;
-                _running = 0.;
+                outputFile << setprecision(12) << _running_force / step << " " << _running_extension / step << " " << step << std::endl;
+                _running_force = 0.;
+                _running_extension = 0.;
             } 
         }
         outputFile.close();
@@ -29,8 +33,7 @@ void appendBufferToFile(const std::string& filename, number* buffer, int step) {
     }
 }
 
-number CrooksTrap::_work_buffer[100000] = {};
-bool CrooksTrap::saved_last_step = false;
+
 
 CrooksTrap::CrooksTrap() :
                 BaseForce() {
@@ -41,6 +44,7 @@ CrooksTrap::CrooksTrap() :
     _rate = -1;
     _stiff_rate = -1;
     PBC = false;
+    saved_last_step = false;
 }
 
 std::tuple<std::vector<int>, std::string> CrooksTrap::init(input_file &inp) {
@@ -93,14 +97,16 @@ LR_vector CrooksTrap::value(llint step, LR_vector &pos) {
     if (step > last_step) {
         if (step%100000 == 0 and step != 0 and !saved_last_step) {
             saved_last_step = true;
-            appendBufferToFile(_file_path, _work_buffer, _sum_steps);
+            appendBufferToFile(_file_path, _force_buffer, _extension_buffer, _sum_steps);
             for (int i = 0; i < 100000; ++i) {
-                _work_buffer[i] = 0;
+                _force_buffer[i] = 0;
+                _extension_buffer[i] = 0;
             }
         }else if (step%100000 == 1) {
             saved_last_step = false;
         }
-        _work_buffer[step%100000] += val * dr/dr.module() * _rate;
+        _force_buffer[step%100000] = val * dr/dr.module();
+        _extension_buffer[step%100000] = _r0 + (_rate * step);
         last_step = step;
     } 
     return val;
