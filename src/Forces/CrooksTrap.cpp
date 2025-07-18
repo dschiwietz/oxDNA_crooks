@@ -63,6 +63,9 @@ std::tuple<std::vector<int>, std::string> CrooksTrap::init(input_file &inp) {
     _sum_steps = 1; //default stiff_rate is 0
     getInputInt(&inp, "sum_steps", &_sum_steps, 0);
 
+    _force_buffer[0] = 0.;
+    _extension_buffer[0] = _r0;
+
     int N = CONFIG_INFO->particles().size();
     if(_ref_id < 0 || _ref_id >= N) {
         throw oxDNAException("Invalid reference particle %d for Crooks Trap", _ref_id);
