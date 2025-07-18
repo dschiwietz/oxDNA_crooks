@@ -1,18 +1,19 @@
 /**
-* @file    CrooksTrap.h
+* @file    MutualCrooksTrap.h
 * @date    25/Jun/2025
 * @author  Dominik
 *
 */
 
-#ifndef CROOKSTRAP_H_
-#define CROOKSTRAP_H_
+#ifndef MutualCrooksTrap_H_
+#define MutualCrooksTrap_H_
 
 #include "BaseForce.h"
+#include "MutualCrooksTrap.h"
 
 using namespace std;
 
-class CrooksTrap: public BaseForce {
+class MutualCrooksTrap: public BaseForce {
 private:
     int _particle;
     int _ref_id;
@@ -30,8 +31,8 @@ public:
     int _sum_steps;
     bool PBC;
 
-    CrooksTrap();
-    virtual ~CrooksTrap() {
+    MutualCrooksTrap();
+    virtual ~MutualCrooksTrap() {
     }
 
     std::tuple<std::vector<int>, std::string> init(input_file &inp) override;
@@ -43,5 +44,5 @@ protected:
     LR_vector _distance(LR_vector u, LR_vector v);
 };
 
-#endif // CROOKSTRAP_H
+#endif // MutualCrooksTrap_H
  

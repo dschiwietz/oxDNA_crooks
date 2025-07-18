@@ -1,11 +1,11 @@
 /*
-* CrooksTrap.cpp
+* MutualCrooksTrap.cpp
 *
 *  Created on: 25/Jun/2025
 *      Author: Dominik 
 */
 
-#include "CrooksTrap.h"
+#include "MutualCrooksTrap.h"
 #include "../Particles/BaseParticle.h"
 #include "../Boxes/BaseBox.h"
 #include <iomanip>
@@ -35,7 +35,7 @@ void appendBufferToFile(const std::string& filename, number* force_buffer, numbe
 
 
 
-CrooksTrap::CrooksTrap() :
+MutualCrooksTrap::MutualCrooksTrap():
                 BaseForce() {
     _ref_id = -2;
     _particle = -2;
@@ -47,7 +47,7 @@ CrooksTrap::CrooksTrap() :
     saved_last_step = false;
 }
 
-std::tuple<std::vector<int>, std::string> CrooksTrap::init(input_file &inp) {
+std::tuple<std::vector<int>, std::string> MutualCrooksTrap::init(input_file &inp) {
     BaseForce::init(inp);
 
     getInputInt(&inp, "particle", &_particle, 1);
@@ -73,18 +73,18 @@ std::tuple<std::vector<int>, std::string> CrooksTrap::init(input_file &inp) {
     _p_ptr = CONFIG_INFO->particles()[_ref_id];
 
     if(_particle >= N || N < -1) {
-        throw oxDNAException("Trying to add a CrooksTrap on non-existent particle %d. Aborting", _particle);
+        throw oxDNAException("Trying to add a MutualCrooksTrap on non-existent particle %d. Aborting", _particle);
     }
     if(_particle == -1) {
-        throw oxDNAException("Cannot apply CrooksTrap to all particles. Aborting");
+        throw oxDNAException("Cannot apply MutualCrooksTrap to all particles. Aborting");
     }
 
-    std::string description = Utils::sformat("CrooksTrap (stiff=%g, stiff_rate=%g, r0=%g, rate=%g, ref_particle=%d, PBC=%d)", _stiff, _stiff_rate, _r0, _rate, _ref_id, PBC);
+    std::string description = Utils::sformat("MutualCrooksTrap (stiff=%g, stiff_rate=%g, r0=%g, rate=%g, ref_particle=%d, PBC=%d)", _stiff, _stiff_rate, _r0, _rate, _ref_id, PBC);
 
     return std::make_tuple(std::vector<int>{_particle}, description);
 }
 
-LR_vector CrooksTrap::_distance(LR_vector u, LR_vector v) {
+LR_vector MutualCrooksTrap::_distance(LR_vector u, LR_vector v) {
     if(PBC) {
         return CONFIG_INFO->box->min_image(u, v);
     }
@@ -93,7 +93,7 @@ LR_vector CrooksTrap::_distance(LR_vector u, LR_vector v) {
     }
 }
 
-LR_vector CrooksTrap::value(llint step, LR_vector &pos) {
+LR_vector MutualCrooksTrap::value(llint step, LR_vector &pos) {
     LR_vector dr = _distance(pos, CONFIG_INFO->box->get_abs_pos(_p_ptr));
     LR_vector val = (dr / dr.module()) * (dr.module() - (_r0 + (_rate * step))) * (_stiff + (_stiff_rate * step));
     
@@ -115,7 +115,7 @@ LR_vector CrooksTrap::value(llint step, LR_vector &pos) {
     return val;
 }
 
-number CrooksTrap::potential(llint step, LR_vector &pos) {
+number MutualCrooksTrap::potential(llint step, LR_vector &pos) {
     LR_vector dr = _distance(pos, CONFIG_INFO->box->get_abs_pos(_p_ptr));
     return pow(dr.module() - (_r0 + (_rate * step)), 2) * ((number) 0.5) * (_stiff + (_stiff_rate * step));
 }

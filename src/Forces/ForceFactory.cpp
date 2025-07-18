@@ -27,7 +27,8 @@
 #include "RepulsiveEllipsoid.h"
 #include "YukawaSphere.h"
 #include "AttractionPlane.h"
-#include "CrooksTrap.h"
+#include "MutualCrooksTrap.h"
+#include "MovingCrooksTrap.h"
 
 
 // metadynamics-related forces
@@ -72,11 +73,12 @@ void ForceFactory::add_force(input_file &inp, std::vector<BaseParticle *> &parti
 	else if(type_str.compare("sawtooth") == 0) extF = std::make_shared<SawtoothForce>();
 	else if(type_str.compare("twist") == 0) extF = std::make_shared<ConstantRateTorque>();
 	else if(type_str.compare("trap") == 0) extF = std::make_shared<MovingTrap>();
+	else if(type_str.compare("crooks_trap") == 0) extF = std::make_shared<MovingCrooksTrap>();
 	else if(type_str.compare("repulsion_plane") == 0) extF = std::make_shared<RepulsionPlane>();
 	else if(type_str.compare("attraction_plane") == 0) extF = std::make_shared<AttractionPlane>();
 	else if(type_str.compare("repulsion_plane_moving") == 0) extF = std::make_shared<RepulsionPlaneMoving>();
 	else if(type_str.compare("mutual_trap") == 0) extF = std::make_shared<MutualTrap>();
-	else if(type_str.compare("crooks_trap") == 0) extF = std::make_shared<CrooksTrap>();
+	else if(type_str.compare("mutual_crooks_trap") == 0) extF = std::make_shared<MutualCrooksTrap>();
 	else if(type_str.compare("lowdim_trap") == 0) extF = std::make_shared<LowdimMovingTrap>();
 	else if(type_str.compare("constant_trap") == 0) extF = std::make_shared<ConstantTrap>();
 	else if(type_str.compare("sphere") == 0) extF = std::make_shared<RepulsiveSphere>();

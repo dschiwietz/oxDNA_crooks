@@ -1,4 +1,4 @@
-INFO: seeding the RNG with 438543203
+INFO: seeding the RNG with -1124456769
 INFO: Initializing backend 
 
 WARNING: The 'backend_precision' option cannot be set by input file when running on CPU
@@ -14,40 +14,39 @@ DEBUG: Debye-Huckel parameters: Q=0.054300, lambda_0=0.361646, lambda=0.357493, 
 DEBUG: Debye-Huckel parameters: debye_huckel_RC=1.608718e+00, debye_huckel_B=8.766182e-03
 INFO: The Debye length at this temperature and salt concentration is 0.357493
 INFO: Setting the maximum IO limit to 1000 MB/s
-INFO: pid: 2195855
+INFO: pid: 2219425
 DEBUG: Debye-Huckel parameters: Q=0.054300, lambda_0=0.361646, lambda=0.357493, r_high=1.072479, cutoff=2.571515
 DEBUG: Debye-Huckel parameters: debye_huckel_RC=1.608718e+00, debye_huckel_B=8.766182e-03
 INFO: The Debye length at this temperature and salt concentration is 0.357493
 INFO: Parsing force file init_forces_jarzynski_fwd.txt
 INFO: Adding a MovingTrap (stiff=1, rate=0, dir=1,0,0, pos0=5,5,5 on particle 0
-INFO: Adding a CrooksTrap (stiff=1, stiff_rate=0, r0=1.2, rate=2e-08, ref_particle=0, PBC=0) on particle 19
+INFO: Adding a MovingCrooksTrap (stiff=1, rate=2e-08, dir=1,0,0, pos0=6,5,5 on particle 19
 INFO:    Force file parsed
 INFO: Strand 0 is not shiftable and therefore 'fix_diffusion' will not act on it
 INFO: (Cells.cpp) N_cells_side: 4, 4, 4; rcut=3.57152, IS_MC: 0
 INFO: N: 20, N molecules: 1
 INFO: Using randomly distributed velocities
-INFO: Initial kinetic energy: 5.445391
+INFO: Initial kinetic energy: 5.160587
 INFO: RELEASE: v3.7.0
-INFO: GIT COMMIT: 3136876a
-INFO: COMPILED ON: 17/07/25
-INFO: diffusion fixed.. -21.2916 -21.2916
-INFO: diffusion fixed.. -23.8744 -23.8744
+INFO: GIT COMMIT: 373b4967
+INFO: COMPILED ON: 18/07/25
+INFO: diffusion fixed.. -26.3875 -26.3875
 INFO: # Caught SIGNAL 2; setting stop = 1
 
 
-INFO: Total Running Time: 6.78733 s, per step: 0.0290642 ms
+INFO: Total Running Time: 5.63918 s, per step: 0.0290621 ms
 INFO: Timings, in seconds, by Timer (total, own, spent in children)
-> SimBackend                          6.787 (100.0%)        0.731 ( 10.8%)        6.056 ( 89.2%)
-***> Lists                            0.122 (  1.8%)        0.122 (  1.8%)        0.000 (  0.0%)
-***> Thermostat                       0.124 (  1.8%)        0.124 (  1.8%)        0.000 (  0.0%)
-***> Forces                           5.173 ( 76.2%)        5.173 ( 76.2%)        0.000 (  0.0%)
-***> First Step                       0.395 (  5.8%)        0.395 (  5.8%)        0.000 (  0.0%)
-***> Observables                      0.241 (  3.5%)        0.241 (  3.5%)        0.000 (  0.0%)
+> SimBackend                          5.639 (100.0%)        0.607 ( 10.8%)        5.032 ( 89.2%)
+***> Lists                            0.103 (  1.8%)        0.103 (  1.8%)        0.000 (  0.0%)
+***> Thermostat                       0.105 (  1.9%)        0.105 (  1.9%)        0.000 (  0.0%)
+***> Forces                           4.296 ( 76.2%)        4.296 ( 76.2%)        0.000 (  0.0%)
+***> First Step                       0.326 (  5.8%)        0.326 (  5.8%)        0.000 (  0.0%)
+***> Observables                      0.202 (  3.6%)        0.202 (  3.6%)        0.000 (  0.0%)
 
 INFO: END OF THE SIMULATION, everything went OK!
-INFO: Lists updated 995 times (every ~234.702513 steps)
+INFO: Lists updated 704 times (every ~275.623580 steps)
 INFO: Aggregated I/O statistics (set debug=1 for file-wise information)
-	256.012 KB written to files
+	212.592 KB written to files
 	  0.000  B written to stdout/stderr
 	For a total of   0.0368 MB/s
 

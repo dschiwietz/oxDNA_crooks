@@ -11,8 +11,7 @@
     type = crooks_trap
     particle = 19
     ref_particle = 0
-    pos0 = 6., 5., 5.
-    dir = 1., 0., 0., 
+    r0 = 1.2
     stiff = 1.
     rate = 0.00000002
     file_path = work_fwd.txt
