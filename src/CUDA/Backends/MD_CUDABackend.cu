@@ -8,6 +8,9 @@
 #include "MD_CUDABackend.h"
 
 #include "../CUDAForces.h"
+#include "../Forces/MovingCrooksTrap.h"
+#include "../Forces/MutualCrooksTrap.h"
+
 #include "CUDA_MD.cuh"
 #include "../CUDA_base_interactions.h"
 #include "../../Interactions/DNAInteraction.h"
@@ -15,6 +18,8 @@
 #include "../Thermostats/CUDAThermostatFactory.h"
 
 #include <typeinfo>
+
+#include <iomanip>
 
 // these pragma instructions remove a few nvcc warnings
 #pragma GCC diagnostic push
@@ -210,6 +215,14 @@ void MD_CUDABackend::_apply_external_forces_changes() {
 				else if(force_type == typeid(YukawaSphere)) {
 					YukawaSphere *p_force = (YukawaSphere *) p->ext_forces[j];
 					init_YukawaSphere_from_CPU(&cuda_force->yukawasphere, p_force);
+				}
+				else if(force_type == typeid(MovingCrooksTrap)) {
+					MovingCrooksTrap *p_force = (MovingCrooksTrap *) p->ext_forces[j];
+					init_MovingCrooksTrap_from_CPU(&cuda_force->movingcrookstrap, p_force, first_time);
+				}
+				else if(force_type == typeid(MutualCrooksTrap)) {
+					MutualCrooksTrap *p_force = (MutualCrooksTrap *) p->ext_forces[j];
+					init_MutualCrooksTrap_from_CPU(&cuda_force->mutualcrookstrap, p_force, first_time);
 				}
 				else {
 					throw oxDNAException("Only ConstantRate, MutualTrap, MovingTrap, LowdimMovingTrap, RepulsionPlane, "
@@ -564,7 +577,11 @@ void MD_CUDABackend::sim_step() {
 	_timer_sorting->resume();
 	if(_d_are_lists_old[0] && _sort_every > 0 && (_N_updates % _sort_every == 0)) {
 		_sort_particles();
+	
 	}
+	
+	// Synchronize Crooks data periodically
+	_sync_crooks_data();
 	_timer_sorting->pause();
 
 	_timer_lists->resume();
@@ -740,3 +757,69 @@ void MD_CUDABackend::init() {
 }
 
 #pragma GCC diagnostic pop
+
+
+void MD_CUDABackend::_sync_crooks_data() {
+    if (!_external_forces) return;
+
+    llint current = current_step();
+    const int buffer_size = 100000;
+	
+
+    // --- Main Logic Block ---
+    if (current > 1 && current % buffer_size <= 1) {
+        for (int i = 0; i < CONFIG_INFO->N(); i++) {
+            BaseParticle* p = CONFIG_INFO->particles()[i];
+            for (auto cpu_force_ptr : p->ext_forces) {
+				MovingCrooksTrap *cpu_force = (MovingCrooksTrap*)cpu_force_ptr;
+				printf("DEBUG: Data sync for force on particle %d at step %lld\n", i, current);
+				if (typeid(*cpu_force_ptr) == typeid(MovingCrooksTrap)) {
+					if (current % buffer_size == 1){
+						cpu_force->saved_last_step = false;
+						continue;
+					}
+					
+					if (cpu_force && !cpu_force->saved_last_step) {
+
+						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_force_buffer, ((moving_crooks_trap*)cpu_force->cuda_force)->force_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
+						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_extension_buffer, ((moving_crooks_trap*)cpu_force->cuda_force)->extension_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
+
+
+						std::ofstream outputFile(cpu_force->_file_path, std::ios::app);
+
+						if (outputFile.is_open()) {
+							number _running_force = 0.;
+							number _running_extension = 0.;
+							for (int i = 0; i < 100000; i++) {
+								_running_force += cpu_force->_single_force_buffer[i];
+								_running_extension += cpu_force->_single_extension_buffer[i];
+								if ((i+1) % (cpu_force->_sum_steps) == 0){
+									outputFile << setprecision(12) << _running_force / cpu_force->_sum_steps << " " << _running_extension / cpu_force->_sum_steps << " " << cpu_force->_sum_steps << std::endl;
+									_running_force = 0.;
+									_running_extension = 0.;
+								} 
+							}
+							outputFile.close();
+						} else {
+							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
+						}
+						
+					}
+				}
+			}
+        }
+    }
+    // --- Flag Reset Block ---
+    else if (current > 0 && current % buffer_size == 1) {
+         for (int i = 0; i < CONFIG_INFO->N(); i++) {
+            BaseParticle* p = CONFIG_INFO->particles()[i];
+            for (auto cpu_force_ptr : p->ext_forces) {
+                MutualCrooksTrap *cpu_force = (MutualCrooksTrap*)cpu_force_ptr;
+                if (cpu_force) {
+                    cpu_force->saved_last_step = false;
+                }
+            }
+        }
+    }
+}
+

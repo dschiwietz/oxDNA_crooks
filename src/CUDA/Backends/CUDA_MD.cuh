@@ -94,6 +94,7 @@ __global__ void rescale_positions(c_number4 *poss, c_number4 ratio) {
 	poss[IND] = ppos;
 }
 
+
 __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUDA_trap *ext_forces, c_number4 *forces, c_number4 *torques, llint step, int max_ext_forces, CUDABox *box) {
 	if(IND >= MD_N[0]) return;
 	// if there are no external forces then just put the force to 0
@@ -468,7 +469,52 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 					F.z += force.z;
 				}
 			}
-			default: {
+			case CUDA_TRAP_MOVING_CROOKS: {
+				c_number tx = extF.movingcrookstrap.pos0.x + extF.movingcrookstrap.rate * step * extF.movingcrookstrap.dir.x;
+				c_number ty = extF.movingcrookstrap.pos0.y + extF.movingcrookstrap.rate * step * extF.movingcrookstrap.dir.y;
+				c_number tz = extF.movingcrookstrap.pos0.z + extF.movingcrookstrap.rate * step * extF.movingcrookstrap.dir.z;
+
+				c_number fx = -extF.movingcrookstrap.stiff * (ppos.x - tx);
+				c_number fy = -extF.movingcrookstrap.stiff * (ppos.y - ty);
+				c_number fz = -extF.movingcrookstrap.stiff * (ppos.z - tz);
+
+				F.x += fx;
+				F.y += fy;
+				F.z += fz;
+
+				// Store data for Crooks analysis (GPU-side, efficient)
+				int buffer_idx = step % 100000;
+				c_number force_component = fx * extF.movingcrookstrap.dir.x + fy * extF.movingcrookstrap.dir.y + fz * extF.movingcrookstrap.dir.z;
+				c_number dir_magnitude = sqrtf(extF.movingcrookstrap.dir.x * extF.movingcrookstrap.dir.x + 
+				                              extF.movingcrookstrap.dir.y * extF.movingcrookstrap.dir.y + 
+				                              extF.movingcrookstrap.dir.z * extF.movingcrookstrap.dir.z);
+				if (dir_magnitude > 0) {
+					force_component /= dir_magnitude;
+				}
+				extF.movingcrookstrap.force_buffer[buffer_idx] = force_component;
+				extF.movingcrookstrap.extension_buffer[buffer_idx] = extF.movingcrookstrap.rate * step;
+				break;
+			}
+			case CUDA_TRAP_MUTUAL_CROOKS: {
+				c_number4 qpos = poss[extF.mutualcrookstrap.p_ind];
+
+				c_number4 dr = (extF.mutualcrookstrap.PBC) ? box->minimum_image(ppos, qpos) : qpos - ppos;
+				c_number dr_abs = _module(dr);
+
+				c_number4 force = dr * ((dr_abs - (extF.mutualcrookstrap.r0 + extF.mutualcrookstrap.rate * step)) * (extF.mutualcrookstrap.stiff + (step * extF.mutualcrookstrap.stiff_rate)) / dr_abs);
+
+				F.x += force.x;
+				F.y += force.y;
+				F.z += force.z;
+
+				// Store data for Crooks analysis (GPU-side, efficient)
+				int buffer_idx = step % 100000;
+				c_number force_magnitude = (dr_abs > 0) ? ((force.x * dr.x + force.y * dr.y + force.z * dr.z) / dr_abs) : 0;
+				extF.mutualcrookstrap.force_buffer[buffer_idx] = force_magnitude;
+				extF.mutualcrookstrap.extension_buffer[buffer_idx] = extF.mutualcrookstrap.r0 + (extF.mutualcrookstrap.rate * step);
+				break;
+			}
+						default: {
 				break;
 			}
 		}

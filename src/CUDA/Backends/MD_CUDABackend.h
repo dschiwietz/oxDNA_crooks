@@ -92,6 +92,10 @@ public:
 
 	virtual void apply_simulation_data_changes();
 	virtual void apply_changes_to_simulation_data();
+
+protected:
+	/// Synchronize Crooks data from GPU to CPU and handle file I/O
+	void _sync_crooks_data();
 };
 
 #endif /* MD_CUDABACKEND_H_ */

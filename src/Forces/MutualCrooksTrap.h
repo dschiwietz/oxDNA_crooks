@@ -11,6 +11,9 @@
 #include "BaseForce.h"
 #include "MutualCrooksTrap.h"
 
+// Forward declaration for buffer file operations
+void appendBufferToFile(const std::string& filename, number* force_buffer, number* extension_buffer, int step);
+
 using namespace std;
 
 class MutualCrooksTrap: public BaseForce {
