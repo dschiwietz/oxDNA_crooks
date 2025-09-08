@@ -772,7 +772,7 @@ void MD_CUDABackend::_sync_crooks_data() {
             BaseParticle* p = CONFIG_INFO->particles()[i];
             for (auto cpu_force_ptr : p->ext_forces) {
 				MovingCrooksTrap *cpu_force = (MovingCrooksTrap*)cpu_force_ptr;
-				printf("DEBUG: Data sync for force on particle %d at step %lld\n", i, current);
+				//printf("DEBUG: Data sync for force on particle %d at step %lld\n", i, current);
 				if (typeid(*cpu_force_ptr) == typeid(MovingCrooksTrap)) {
 					if (current % buffer_size == 1){
 						cpu_force->saved_last_step = false;
