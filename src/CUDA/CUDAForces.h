@@ -531,6 +531,7 @@ void init_MovingCrooksTrap_from_CPU(moving_crooks_trap *cuda_force, MovingCrooks
 	}
 }
 
+
 /**
  * @brief CUDA version of a MutualCrooksTrap.
  */
@@ -549,7 +550,7 @@ struct mutual_crooks_trap {
 	llint *last_step;
 };
 
-void init_MutualCrooksTrap_from_CPU(mutual_crooks_trap *cuda_force, MutualCrooksTrap *cpu_force, bool first_time) {
+void init_MovingCrooksTrap_from_CPU(mutual_crooks_trap *cuda_force, MutualCrooksTrap *cpu_force, bool first_time) {
 	cuda_force->type = CUDA_TRAP_MUTUAL_CROOKS;
 	cuda_force->rate = cpu_force->_rate;
 	cuda_force->stiff = cpu_force->_stiff;
@@ -565,6 +566,8 @@ void init_MutualCrooksTrap_from_CPU(mutual_crooks_trap *cuda_force, MutualCrooks
 		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<c_number>(&cuda_force->extension_buffer, sizeof(c_number) * 100000));
 		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<bool>(&cuda_force->saved_last_step, sizeof(bool)));
 		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<llint>(&cuda_force->last_step, sizeof(llint)));
+
+		cpu_force->cuda_force = cuda_force;
 
 		// Initialize values
 		bool saved_init = cpu_force->saved_last_step;

@@ -29,10 +29,14 @@ public:
     string _file_path;
     number _force_buffer[100000];
     number _extension_buffer[100000];
+    float _single_force_buffer[100000];
+    float _single_extension_buffer[100000];
     bool saved_last_step;
     llint last_step;
     int _sum_steps;
     bool PBC;
+
+    void* cuda_force;
 
     MutualCrooksTrap();
     virtual ~MutualCrooksTrap() {

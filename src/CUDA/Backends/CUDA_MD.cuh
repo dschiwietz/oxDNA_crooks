@@ -509,12 +509,11 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 
 				// Store data for Crooks analysis (GPU-side, efficient)
 				int buffer_idx = step % 100000;
-				c_number force_magnitude = (dr_abs > 0) ? ((force.x * dr.x + force.y * dr.y + force.z * dr.z) / dr_abs) : 0;
-				extF.mutualcrookstrap.force_buffer[buffer_idx] = force_magnitude;
-				extF.mutualcrookstrap.extension_buffer[buffer_idx] = extF.mutualcrookstrap.r0 + (extF.mutualcrookstrap.rate * step);
-				break;
-			}
-						default: {
+				c_number magnitude = sqrtf(force.x * force.x + 
+				                              force.y * force.y + 
+				                              force.z * force.z);
+				extF.mutualcrookstrap.force_buffer[buffer_idx] = magnitude;
+				extF.mutualcrookstrap.extension_buffer[buffer_idx] = extF.mutualcrookstrap.rate * step;
 				break;
 			}
 		}

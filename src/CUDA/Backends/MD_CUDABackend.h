@@ -96,6 +96,8 @@ public:
 protected:
 	/// Synchronize Crooks data from GPU to CPU and handle file I/O
 	void _sync_crooks_data();
+
+	
 };
 
 #endif /* MD_CUDABACKEND_H_ */
