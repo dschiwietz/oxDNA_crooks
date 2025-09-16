@@ -512,7 +512,7 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 				c_number magnitude = sqrtf(force.x * force.x + 
 				                              force.y * force.y + 
 				                              force.z * force.z);
-				extF.mutualcrookstrap.force_buffer[buffer_idx] = magnitude;
+				extF.mutualcrookstrap.force_buffer[buffer_idx] = - (dr.x*force.x + dr.y*force.y + dr.z*force.z)/dr_abs;
 				extF.mutualcrookstrap.extension_buffer[buffer_idx] = extF.mutualcrookstrap.rate * step;
 				break;
 			}
