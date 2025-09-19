@@ -1,0 +1,10 @@
+{
+    type = crooks_com
+    com_list = 19, 18
+    ref_list = 0, 1
+    r0 = 1.2
+    stiff = 1.
+    rate = 0.0000002
+    file_path = work_fwd_FE.txt
+    sum_steps = 1000
+}

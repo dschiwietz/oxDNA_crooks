@@ -28,6 +28,7 @@
 #include "../Forces/AttractionPlane.h"
 #include "../Forces/MovingCrooksTrap.h"
 #include "../Forces/MutualCrooksTrap.h"
+#include "../Forces/CrooksCOMForce.h"
 
 #include "CUDAUtils.h"
 
@@ -51,6 +52,7 @@
 #define CUDA_ATTRACTION_PLANE 16
 #define CUDA_TRAP_MOVING_CROOKS 17
 #define CUDA_TRAP_MUTUAL_CROOKS 18
+#define CUDA_COM_FORCE_CROOKS 19
 
 
 /**
@@ -586,6 +588,67 @@ void init_MovingCrooksTrap_from_CPU(mutual_crooks_trap *cuda_force, MutualCrooks
 }
 
 /**
+ * @brief CUDA version of a CrooksCOMForce.
+ */
+struct crooks_COM_force {
+    int type;
+    c_number stiff;
+    c_number r0;
+    c_number rate;
+    int n_com;
+    int n_ref;
+    int *com_indexes;
+	int *ref_indexes;
+	c_number *force_buffer;
+	c_number *extension_buffer;
+	int sum_steps;
+	bool *saved_last_step;
+	llint *last_step;
+};
+
+void init_crooks_COMForce_from_CPU(crooks_COM_force *cuda_force, CrooksCOMForce *cpu_force, bool first_time) {
+	cuda_force->type = CUDA_COM_FORCE_CROOKS;
+	cuda_force->stiff = cpu_force->_stiff;
+	cuda_force->r0 = cpu_force->_r0;
+	cuda_force->rate = cpu_force->_rate;
+	cuda_force->n_com = cpu_force->_com_list.size();
+	cuda_force->n_ref = cpu_force->_ref_list.size();
+	cuda_force->sum_steps = cpu_force->_sum_steps;
+
+	std::vector<int> local_com_indexes;
+	for(auto particle : cpu_force->_com_list) {
+		local_com_indexes.push_back(particle->index);
+	}
+
+	std::vector<int> local_ref_indexes;
+	for(auto particle : cpu_force->_ref_list){
+		local_ref_indexes.push_back(particle->index);
+	}
+
+	if(first_time) {
+		// Allocate GPU memory for buffers
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<c_number>(&cuda_force->force_buffer, sizeof(c_number) * 100000));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<c_number>(&cuda_force->extension_buffer, sizeof(c_number) * 100000));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<bool>(&cuda_force->saved_last_step, sizeof(bool)));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<llint>(&cuda_force->last_step, sizeof(llint)));
+
+		cpu_force->cuda_force = cuda_force;
+
+		// Initialize values
+		bool saved_init = cpu_force->saved_last_step;
+		llint last_init = cpu_force->last_step;
+		CUDA_SAFE_CALL(cudaMemcpy(cuda_force->saved_last_step, &saved_init, sizeof(bool), cudaMemcpyHostToDevice));
+		CUDA_SAFE_CALL(cudaMemcpy(cuda_force->last_step, &last_init, sizeof(llint), cudaMemcpyHostToDevice));
+		// TODO: this memory never gets free'd
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<int>(&cuda_force->com_indexes, sizeof(int) * local_com_indexes.size()));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<int>(&cuda_force->ref_indexes, sizeof(int) * local_ref_indexes.size()));
+	}
+
+	CUDA_SAFE_CALL(cudaMemcpy(cuda_force->com_indexes, local_com_indexes.data(), sizeof(int) * local_com_indexes.size(), cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpy(cuda_force->ref_indexes, local_ref_indexes.data(), sizeof(int) * local_ref_indexes.size(), cudaMemcpyHostToDevice));
+}
+
+/**
  * @brief Used internally by CUDA classes to provide an inheritance-like mechanism for external forces.
  */
 union CUDA_trap {
@@ -609,6 +672,7 @@ union CUDA_trap {
 	attraction_plane attractionplane;
 	moving_crooks_trap movingcrookstrap;
 	mutual_crooks_trap mutualcrookstrap;
+	crooks_COM_force crookscomforce;
 };
 
 #endif /* CUDAFORCES_H_ */

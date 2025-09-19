@@ -29,6 +29,7 @@
 #include "AttractionPlane.h"
 #include "MutualCrooksTrap.h"
 #include "MovingCrooksTrap.h"
+#include "CrooksCOMForce.h"
 
 
 // metadynamics-related forces
@@ -84,6 +85,7 @@ void ForceFactory::add_force(input_file &inp, std::vector<BaseParticle *> &parti
 	else if(type_str.compare("sphere") == 0) extF = std::make_shared<RepulsiveSphere>();
 	else if(type_str.compare("sphere_smooth") == 0) extF = std::make_shared<RepulsiveSphereSmooth>();
 	else if(type_str.compare("com") == 0) extF = std::make_shared<COMForce>();
+	else if(type_str.compare("crooks_com") == 0) extF = std::make_shared<CrooksCOMForce>();
 	else if(type_str.compare("LJ_wall") == 0) extF = std::make_shared<LJWall>();
 	else if(type_str.compare("hard_wall") == 0) extF = std::make_shared<HardWall>();
 	else if(type_str.compare("alignment_field") == 0) extF = std::make_shared<AlignmentField>();
