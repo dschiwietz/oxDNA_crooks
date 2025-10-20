@@ -29,6 +29,8 @@
 #include "../Forces/MovingCrooksTrap.h"
 #include "../Forces/MutualCrooksTrap.h"
 #include "../Forces/CrooksCOMForce.h"
+#include "../Forces/MovingCOMForce.h"
+#include "../Forces/MovingCrooksCOMForce.h"
 
 #include "CUDAUtils.h"
 
@@ -53,6 +55,8 @@
 #define CUDA_TRAP_MOVING_CROOKS 17
 #define CUDA_TRAP_MUTUAL_CROOKS 18
 #define CUDA_COM_FORCE_CROOKS 19
+#define CUDA_MOVING_COM_FORCE 20
+#define CUDA_MOVING_CROOKS_COM_FORCE 21
 
 
 /**
@@ -397,6 +401,92 @@ void init_COMForce_from_CPU(COM_force *cuda_force, COMForce *cpu_force, bool fir
 /**
  * @brief CUDA version of a COMForce.
  */
+struct Moving_COM_force {
+    int type;
+    c_number stiff;
+    float3 pos0;
+    c_number rate;
+	float3 dir;
+    int n_com;
+    int *com_indexes;
+};
+
+void init_Moving_COMForce_from_CPU(Moving_COM_force *cuda_force, MovingCOMForce *cpu_force, bool first_time) {
+	cuda_force->type = CUDA_MOVING_COM_FORCE;
+	cuda_force->stiff = cpu_force->_stiff;
+	cuda_force->pos0 = make_float3(cpu_force->_pos0.x, cpu_force->_pos0.y, cpu_force->_pos0.z);
+	cuda_force->dir = make_float3(cpu_force->_direction.x, cpu_force->_direction.y, cpu_force->_direction.z);
+	cuda_force->rate = cpu_force->_rate;
+	cuda_force->n_com = cpu_force->_com_list.size();
+
+	std::vector<int> local_com_indexes;
+	for(auto particle : cpu_force->_com_list) {
+		local_com_indexes.push_back(particle->index);
+	}
+
+	if(first_time) {
+		// TODO: this memory never gets free'd
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<int>(&cuda_force->com_indexes, sizeof(int) * local_com_indexes.size()));
+	}
+
+	CUDA_SAFE_CALL(cudaMemcpy(cuda_force->com_indexes, local_com_indexes.data(), sizeof(int) * local_com_indexes.size(), cudaMemcpyHostToDevice));
+}
+
+/**
+ * @brief CUDA version of a COMForce.
+ */
+struct Moving_Crooks_COM_force {
+    int type;
+    c_number stiff;
+    float3 pos0;
+    c_number rate;
+	float3 dir;
+    int n_com;
+    int *com_indexes;
+	c_number *force_buffer;
+	c_number *extension_buffer;
+	int sum_steps;
+	bool *saved_last_step;
+	llint *last_step;
+};
+
+void init_Moving_Crooks_COMForce_from_CPU(Moving_Crooks_COM_force *cuda_force, MovingCrooksCOMForce *cpu_force, bool first_time) {
+	cuda_force->type = CUDA_MOVING_CROOKS_COM_FORCE;
+	cuda_force->stiff = cpu_force->_stiff;
+	cuda_force->pos0 = make_float3(cpu_force->_pos0.x, cpu_force->_pos0.y, cpu_force->_pos0.z);
+	cuda_force->dir = make_float3(cpu_force->_direction.x, cpu_force->_direction.y, cpu_force->_direction.z);
+	cuda_force->rate = cpu_force->_rate;
+	cuda_force->n_com = cpu_force->_com_list.size();
+
+	std::vector<int> local_com_indexes;
+	for(auto particle : cpu_force->_com_list) {
+		local_com_indexes.push_back(particle->index);
+	}
+
+	if(first_time) {
+		// Allocate GPU memory for buffers
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<c_number>(&cuda_force->force_buffer, sizeof(c_number) * 100000));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<c_number>(&cuda_force->extension_buffer, sizeof(c_number) * 100000));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<bool>(&cuda_force->saved_last_step, sizeof(bool)));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<llint>(&cuda_force->last_step, sizeof(llint)));
+
+		cpu_force->cuda_force = cuda_force;
+
+		// Initialize values
+		bool saved_init = cpu_force->saved_last_step;
+		llint last_init = cpu_force->last_step;
+		CUDA_SAFE_CALL(cudaMemcpy(cuda_force->saved_last_step, &saved_init, sizeof(bool), cudaMemcpyHostToDevice));
+		CUDA_SAFE_CALL(cudaMemcpy(cuda_force->last_step, &last_init, sizeof(llint), cudaMemcpyHostToDevice));
+		// TODO: this memory never gets free'd
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<int>(&cuda_force->com_indexes, sizeof(int) * local_com_indexes.size()));
+	}
+
+	CUDA_SAFE_CALL(cudaMemcpy(cuda_force->com_indexes, local_com_indexes.data(), sizeof(int) * local_com_indexes.size(), cudaMemcpyHostToDevice));
+}
+
+/**
+ * @brief CUDA version of a COMForce.
+ */
 struct lt_com_trap {
 	int type;
 
@@ -673,6 +763,8 @@ union CUDA_trap {
 	moving_crooks_trap movingcrookstrap;
 	mutual_crooks_trap mutualcrookstrap;
 	crooks_COM_force crookscomforce;
+	Moving_COM_force movingcomforce;
+	Moving_Crooks_COM_force movingcrookscomforce;
 };
 
 #endif /* CUDAFORCES_H_ */

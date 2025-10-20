@@ -30,6 +30,8 @@
 #include "MutualCrooksTrap.h"
 #include "MovingCrooksTrap.h"
 #include "CrooksCOMForce.h"
+#include "MovingCOMForce.h"
+#include "MovingCrooksCOMForce.h"
 
 
 // metadynamics-related forces
@@ -97,6 +99,8 @@ void ForceFactory::add_force(input_file &inp, std::vector<BaseParticle *> &parti
 	else if(type_str.compare("meta_2D_com_trap") == 0) extF = std::make_shared<LT2DCOMTrap>();
 	else if(type_str.compare("meta_atan_com_trap") == 0) extF = std::make_shared<LTAtanCOMTrap>();
 	else if(type_str.compare("meta_com_angle_trap") == 0) extF = std::make_shared<LTCOMAngleTrap>();
+	else if(type_str.compare("moving_com") == 0) extF = std::make_shared<MovingCOMForce>();
+	else if(type_str.compare("moving_crooks_com") == 0) extF = std::make_shared<MovingCrooksCOMForce>();
 	else throw oxDNAException("Invalid force type `%s\'", type_str.c_str());
 
 	string group = string("default");

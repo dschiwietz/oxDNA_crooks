@@ -397,6 +397,56 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 				F.z += force.z;
 
 				break;
+			}case CUDA_MOVING_COM_FORCE: {
+				c_number4 com = make_c_number4(0., 0., 0., 0.);
+				for(int index = 0; index < extF.movingcomforce.n_com; index++){
+					int p_idx = extF.movingcomforce.com_indexes[index];
+					com += poss[p_idx];
+				}
+				com.x /= extF.movingcomforce.n_com;
+				com.y /= extF.movingcomforce.n_com;
+				com.z /= extF.movingcomforce.n_com;
+
+				c_number ref_x = extF.movingcomforce.pos0.x + extF.movingcomforce.dir.x * step * extF.movingcomforce.rate;
+				c_number ref_y = extF.movingcomforce.pos0.y + extF.movingcomforce.dir.y * step * extF.movingcomforce.rate;
+				c_number ref_z = extF.movingcomforce.pos0.z + extF.movingcomforce.dir.z * step * extF.movingcomforce.rate;
+
+				F.x += - extF.movingcomforce.stiff * (com.x - ref_x) / extF.movingcomforce.n_com;
+				F.y += - extF.movingcomforce.stiff * (com.y - ref_y) / extF.movingcomforce.n_com;
+				F.z += - extF.movingcomforce.stiff * (com.z - ref_z) / extF.movingcomforce.n_com;
+
+				break;
+			}
+			case CUDA_MOVING_CROOKS_COM_FORCE: {
+				c_number4 com = make_c_number4(0., 0., 0., 0.);
+				for(int index = 0; index < extF.movingcrookscomforce.n_com; index++){
+					int p_idx = extF.movingcrookscomforce.com_indexes[index];
+					com += poss[p_idx];
+				}
+				com.x /= extF.movingcrookscomforce.n_com;
+				com.y /= extF.movingcrookscomforce.n_com;
+				com.z /= extF.movingcrookscomforce.n_com;
+
+				c_number ref_x = extF.movingcrookscomforce.pos0.x + extF.movingcrookscomforce.dir.x * step * extF.movingcrookscomforce.rate;
+				c_number ref_y = extF.movingcrookscomforce.pos0.y + extF.movingcrookscomforce.dir.y * step * extF.movingcrookscomforce.rate;
+				c_number ref_z = extF.movingcrookscomforce.pos0.z + extF.movingcrookscomforce.dir.z * step * extF.movingcrookscomforce.rate;
+
+				c_number4 ref = make_c_number4(ref_x, ref_y, ref_z, 0.);
+
+				c_number4 dr = ref - com;
+				c_number dr_abs = _module(dr);
+				c_number4 force = dr * extF.movingcrookscomforce.stiff / extF.movingcrookscomforce.n_com;
+
+				F.x += force.x;
+				F.y += force.y;
+				F.z += force.z;
+
+				int buffer_idx = step % 100000;
+
+				extF.movingcrookscomforce.force_buffer[buffer_idx] = (extF.movingcrookscomforce.dir.x*force.x + extF.movingcrookscomforce.dir.y*force.y + extF.movingcrookscomforce.dir.z*force.z)/dr_abs;
+				extF.movingcrookscomforce.extension_buffer[buffer_idx] = extF.movingcrookscomforce.rate * step;
+
+				break;
 			}
 			case CUDA_LR_COM_TRAP: {
 				c_number4 p1a_vec({0.f, 0.f, 0.f, 0.f});

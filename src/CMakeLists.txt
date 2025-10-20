@@ -171,6 +171,8 @@ SET(forces_SOURCES
 	Forces/MutualCrooksTrap.cpp
 	Forces/MovingCrooksTrap.cpp
 	Forces/CrooksCOMForce.cpp
+	Forces/MovingCOMForce.cpp
+	Forces/MovingCrooksCOMForce.cpp
 )
 
 SET(box_SOURCES
