@@ -30,6 +30,8 @@ protected:
 
 	LR_vector _com;
 
+	
+
 	void _compute_coms(llint step);
 
 public:
@@ -46,6 +48,8 @@ public:
 	virtual number potential(llint step, LR_vector &pos);
 	
 	void* cuda_force;
+
+	LR_vector _force_multiplication_vector;
 
 
 	std::string _file_path;

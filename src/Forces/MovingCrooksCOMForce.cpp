@@ -76,6 +76,15 @@ std::tuple<std::vector<int>, std::string> MovingCrooksCOMForce::init(input_file 
 	}
 	_pos0 = LR_vector((number) tmpf[0], (number) tmpf[1], (number) tmpf[2]);
 
+	if (getInputString(&inp, "force_multiplication_vector", strdir, 0) == KEY_FOUND){
+		tmpi = sscanf(strdir.c_str(), "%lf,%lf,%lf", tmpf, tmpf + 1, tmpf + 2);
+		if(tmpi != 3) {
+			throw oxDNAException("Could not parse force_multiplication_vector %s in external forces file. Aborting", strdir.c_str());
+		}
+		_force_multiplication_vector = LR_vector((number) tmpf[0], (number) tmpf[1], (number) tmpf[2]);
+	}else{
+		_force_multiplication_vector = LR_vector(1,1,1);
+	}
 
 	auto com_indexes = Utils::get_particles_from_string(CONFIG_INFO->particles(), _com_string, "COMForce");
 	for(auto it = com_indexes.begin(); it != com_indexes.end(); it++) {
@@ -101,6 +110,9 @@ void MovingCrooksCOMForce::_compute_coms(llint step) {
 LR_vector MovingCrooksCOMForce::value(llint step, LR_vector &pos) {
 	_compute_coms(step);
 	LR_vector dist = (_pos0 + (_rate * step) * _direction - _com);
+	dist.x *= _force_multiplication_vector.x;
+	dist.y *= _force_multiplication_vector.y;
+	dist.z *= _force_multiplication_vector.z;
 	number d_com = dist.module();
 	number force = d_com * _stiff / _com_list.size();
 
@@ -125,5 +137,9 @@ LR_vector MovingCrooksCOMForce::value(llint step, LR_vector &pos) {
 
 number MovingCrooksCOMForce::potential(llint step, LR_vector &pos) {
 	_compute_coms(step);
-	return 0.5 * _stiff * SQR((_pos0 + (_rate * step) * _direction - _com).module()) / _com_list.size();
+	LR_vector dist = (_pos0 + (_rate * step) * _direction - _com);
+	dist.x *= _force_multiplication_vector.x;
+	dist.y *= _force_multiplication_vector.y;
+	dist.z *= _force_multiplication_vector.z;
+	return 0.5 * _stiff * SQR(dist.module()) / _com_list.size();
 }

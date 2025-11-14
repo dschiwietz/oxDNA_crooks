@@ -30,6 +30,8 @@ protected:
 
 	LR_vector _com;
 
+	
+
 	void _compute_coms(llint step);
 
 public:
@@ -41,6 +43,8 @@ public:
 	virtual ~MovingCOMForce();
 
 	virtual std::tuple<std::vector<int>, std::string> init(input_file &inp) override;
+
+	LR_vector _force_multiplication_vector;
 
 	virtual LR_vector value(llint step, LR_vector &pos);
 	virtual number potential(llint step, LR_vector &pos);

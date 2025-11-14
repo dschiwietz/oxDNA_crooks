@@ -409,6 +409,7 @@ struct Moving_COM_force {
 	float3 dir;
     int n_com;
     int *com_indexes;
+	float3 force_multiplication_vector;
 };
 
 void init_Moving_COMForce_from_CPU(Moving_COM_force *cuda_force, MovingCOMForce *cpu_force, bool first_time) {
@@ -418,6 +419,7 @@ void init_Moving_COMForce_from_CPU(Moving_COM_force *cuda_force, MovingCOMForce 
 	cuda_force->dir = make_float3(cpu_force->_direction.x, cpu_force->_direction.y, cpu_force->_direction.z);
 	cuda_force->rate = cpu_force->_rate;
 	cuda_force->n_com = cpu_force->_com_list.size();
+	cuda_force->force_multiplication_vector = make_float3(cpu_force->_force_multiplication_vector.x, cpu_force->_force_multiplication_vector.y, cpu_force->_force_multiplication_vector.z);
 
 	std::vector<int> local_com_indexes;
 	for(auto particle : cpu_force->_com_list) {
@@ -448,6 +450,7 @@ struct Moving_Crooks_COM_force {
 	int sum_steps;
 	bool *saved_last_step;
 	llint *last_step;
+	float3 force_multiplication_vector;
 };
 
 void init_Moving_Crooks_COMForce_from_CPU(Moving_Crooks_COM_force *cuda_force, MovingCrooksCOMForce *cpu_force, bool first_time) {
@@ -457,6 +460,8 @@ void init_Moving_Crooks_COMForce_from_CPU(Moving_Crooks_COM_force *cuda_force, M
 	cuda_force->dir = make_float3(cpu_force->_direction.x, cpu_force->_direction.y, cpu_force->_direction.z);
 	cuda_force->rate = cpu_force->_rate;
 	cuda_force->n_com = cpu_force->_com_list.size();
+	cuda_force->force_multiplication_vector = make_float3(cpu_force->_force_multiplication_vector.x, cpu_force->_force_multiplication_vector.y, cpu_force->_force_multiplication_vector.z);
+
 
 	std::vector<int> local_com_indexes;
 	for(auto particle : cpu_force->_com_list) {
@@ -597,6 +602,7 @@ void init_MovingCrooksTrap_from_CPU(moving_crooks_trap *cuda_force, MovingCrooks
 	cuda_force->pos0 = make_float3(cpu_force->_pos0.x, cpu_force->_pos0.y, cpu_force->_pos0.z);
 	cuda_force->dir = make_float3(cpu_force->_direction.x, cpu_force->_direction.y, cpu_force->_direction.z);
 	cuda_force->sum_steps = cpu_force->_sum_steps;
+	
 
 	if(first_time) {
 		// Allocate GPU memory for buffers
