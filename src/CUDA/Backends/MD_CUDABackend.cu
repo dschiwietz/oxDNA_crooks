@@ -778,7 +778,7 @@ void MD_CUDABackend::_sync_crooks_data() {
     const int buffer_size = 100000;
 	
     if (current > 1 && current % buffer_size <= 1) {
-		int num_crooks_com_prints = 0;
+		string printed_paths[100];
         for (int i = 0; i < CONFIG_INFO->N(); i++) {
             BaseParticle* p = CONFIG_INFO->particles()[i];
             for (auto cpu_force_ptr : p->ext_forces) {
@@ -838,9 +838,24 @@ void MD_CUDABackend::_sync_crooks_data() {
 							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
 						}
 					}
-				}else if (typeid(*cpu_force_ptr) == typeid(CrooksCOMForce) and num_crooks_com_prints < 1) {
-					num_crooks_com_prints += 1;
+				}else if (typeid(*cpu_force_ptr) == typeid(CrooksCOMForce)) {
 					CrooksCOMForce *cpu_force = (CrooksCOMForce*)cpu_force_ptr;
+					string path = cpu_force->_file_path;
+
+					bool _break = false;
+
+					for (int i = 0; i < 100; i++) {
+						if (printed_paths[i] == path) {
+							_break = true;
+							break;
+						}
+						if (printed_paths[i].empty()) {
+							printed_paths[i] = path;
+							break;
+						}
+					}
+					if (_break) break;
+
 					
 					if (current % buffer_size == 1){
 						cpu_force->saved_last_step = false;
@@ -868,9 +883,25 @@ void MD_CUDABackend::_sync_crooks_data() {
 							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
 						}
 					}
-				}else if (typeid(*cpu_force_ptr) == typeid(MovingCrooksCOMForce) and num_crooks_com_prints < 1) {
-					num_crooks_com_prints += 1;
+				}else if (typeid(*cpu_force_ptr) == typeid(MovingCrooksCOMForce)) {
+
 					MovingCrooksCOMForce *cpu_force = (MovingCrooksCOMForce*)cpu_force_ptr;
+					string path = cpu_force->_file_path;
+
+					bool _break = false;
+
+					for (int i = 0; i < 100; i++) {
+						if (printed_paths[i] == path) {
+							_break = true;
+							break;
+						}
+						if (printed_paths[i].empty()) {
+							printed_paths[i] = path;
+							break;
+						}
+					}
+					if (_break) break;
+
 					
 					if (current % buffer_size == 1){
 						cpu_force->saved_last_step = false;

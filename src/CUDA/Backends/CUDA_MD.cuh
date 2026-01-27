@@ -414,13 +414,13 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 				c_number4 ref = make_c_number4(ref_x, ref_y, ref_z, 0.);
 
 				c_number4 dr = ref - com;
-				dr.x *= extF.movingcrookscomforce.force_multiplication_vector.x;
-				dr.y *= extF.movingcrookscomforce.force_multiplication_vector.y;
-				dr.z *= extF.movingcrookscomforce.force_multiplication_vector.z;
+				dr.x *= extF.movingcomforce.force_multiplication_vector.x;
+				dr.y *= extF.movingcomforce.force_multiplication_vector.y;
+				dr.z *= extF.movingcomforce.force_multiplication_vector.z;
 
-				F.x += - extF.movingcomforce.stiff * dr.x / extF.movingcomforce.n_com;
-				F.y += - extF.movingcomforce.stiff * dr.y / extF.movingcomforce.n_com;
-				F.z += - extF.movingcomforce.stiff * dr.z / extF.movingcomforce.n_com;
+				F.x += extF.movingcomforce.stiff * dr.x / extF.movingcomforce.n_com;
+				F.y += extF.movingcomforce.stiff * dr.y / extF.movingcomforce.n_com;
+				F.z += extF.movingcomforce.stiff * dr.z / extF.movingcomforce.n_com;
 
 				break;
 			}

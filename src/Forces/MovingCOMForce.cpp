@@ -63,7 +63,7 @@ std::tuple<std::vector<int>, std::string> MovingCOMForce::init(input_file &inp) 
 		_com_list.insert(CONFIG_INFO->particles()[*it]);
 	}
 
-	std::string description = Utils::sformat("MovingCOMTrap (stiff=%g, rate=%g, dir=%g,%g,%g, pos0=%g,%g,%g)", _stiff, _rate, _direction.x, _direction.y, _direction.z, _pos0.x, _pos0.y, _pos0.z);
+	std::string description = Utils::sformat("MovingCOMTrap (stiff=%g, rate=%g, dir=%g,%g,%g, pos0=%g,%g,%g, force_multiplication_vector=%g,%g,%g)", _stiff, _rate, _direction.x, _direction.y, _direction.z, _pos0.x, _pos0.y, _pos0.z, _force_multiplication_vector.x, _force_multiplication_vector.y, _force_multiplication_vector.z);
 	return std::make_tuple(com_indexes, description);
 }
 
