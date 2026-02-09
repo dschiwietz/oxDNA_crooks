@@ -11,6 +11,12 @@
 #include "Thermostats/ThermostatFactory.h"
 #include "Thermostats/NoThermostat.h"
 #include "MCMoves/MoveFactory.h"
+#include "../Forces/MovingCrooksTrap.h"
+#include "../Forces/MutualCrooksTrap.h"
+#include "../Forces/CrooksCOMForce.h"
+#include "../Forces/MovingCrooksCOMForce.h"
+
+#include <iomanip>
 
 MD_CPUBackend::MD_CPUBackend() :
 				MDBackend() {
@@ -59,6 +65,21 @@ void MD_CPUBackend::init() {
 	_thermostat->init();
 	if(_use_barostat) {
 		_V_move->init();
+	}
+
+	_crooks_forces_registry.clear();
+	for(auto p : _particles) {
+		for(auto& raw_f : p->ext_forces) {
+			auto &type = typeid(*raw_f);
+			if(type == typeid(MovingCrooksTrap) || type == typeid(MutualCrooksTrap) || 
+			type == typeid(CrooksCOMForce)   || type == typeid(MovingCrooksCOMForce)) {
+				
+				// Avoid duplicates if the same force is shared across particles
+				if(std::find(_crooks_forces_registry.begin(), _crooks_forces_registry.end(), raw_f) == _crooks_forces_registry.end()) {
+					_crooks_forces_registry.push_back(raw_f);
+				}
+			}
+		}
 	}
 
 	_compute_forces();
@@ -190,6 +211,8 @@ void MD_CPUBackend::sim_step() {
 	}
 	_timer_lists->pause();
 
+	_sync_crooks_data();
+
 	if(_is_barostat_active()) {
 		_timer_barostat->resume();
 		_V_move->apply(current_step());
@@ -208,4 +231,29 @@ void MD_CPUBackend::sim_step() {
 	_timer_thermostat->pause();
 
 	_mytimer->pause();
+}
+
+void MD_CPUBackend::_sync_crooks_data() {
+    if (_crooks_forces_registry.empty()) return;
+
+    llint current = current_step();
+    const int buffer_size = 100000;
+    
+    // Quick timing check
+    if (current <= 1 || current % buffer_size > 1) return;
+
+    for (BaseForce* force_ptr : _crooks_forces_registry) {
+        if (auto* mct = dynamic_cast<MovingCrooksTrap*>(force_ptr)) {
+            _process_crooks_sync_cpu(mct, current);
+        }
+        else if (auto* muct = dynamic_cast<MutualCrooksTrap*>(force_ptr)) {
+            _process_crooks_sync_cpu(muct, current);
+        }
+        else if (auto* ccf = dynamic_cast<CrooksCOMForce*>(force_ptr)) {
+            _process_crooks_sync_cpu(ccf, current);
+        }
+        else if (auto* mccf = dynamic_cast<MovingCrooksCOMForce*>(force_ptr)) {
+            _process_crooks_sync_cpu(mccf, current);
+        }
+    }
 }

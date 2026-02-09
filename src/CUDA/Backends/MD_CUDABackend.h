@@ -21,6 +21,8 @@
 #include "../Lists/CUDANoList.h"
 #include "../Lists/CUDASimpleVerletList.h"
 
+#include <iomanip>
+
 union CUDA_trap;
 
 /**
@@ -63,6 +65,8 @@ protected:
 	CUDA_trap *_d_ext_forces;
 	int _max_ext_forces;
 
+	std::vector<BaseForce*> _crooks_forces_registry;
+
 	virtual void _gpu_to_host();
 	virtual void _host_to_gpu();
 	virtual void _apply_external_forces_changes();
@@ -80,6 +84,49 @@ protected:
 	virtual void _update_stress_tensor();
 
 	virtual void _init_CUDA_MD_symbols();
+
+	/**
+     * @brief Helper template to handle the GPU-to-CPU transfer and file I/O for Crooks forces.
+     * Defined in header to allow template instantiation in the .cpp file.
+     */
+    template <typename T>
+    void _process_crooks_sync(T* cpu_force, c_number* d_force_buf, c_number* d_ext_buf, llint current) {
+        const int buffer_size = 100000;
+        
+        // Handle start of a new window
+        if (current % buffer_size == 1) {
+            cpu_force->saved_last_step = false;
+            return;
+        }
+
+        if (cpu_force && !cpu_force->saved_last_step) {
+            // Blocking memory copy: Syncs GPU with CPU
+            CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_force_buffer, d_force_buf, sizeof(c_number) * buffer_size, cudaMemcpyDeviceToHost));
+            CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_extension_buffer, d_ext_buf, sizeof(c_number) * buffer_size, cudaMemcpyDeviceToHost));
+            
+            std::ofstream outputFile(cpu_force->_file_path, std::ios::app);
+            if (outputFile.is_open()) {
+                number _running_force = 0.;
+                number _running_extension = 0.;
+                
+                for (int i = 0; i < buffer_size; i++) {
+                    _running_force += cpu_force->_single_force_buffer[i];
+                    _running_extension += cpu_force->_single_extension_buffer[i];
+                    
+                    if ((i + 1) % (cpu_force->_sum_steps) == 0) {
+                        outputFile << std::setprecision(12) 
+                                   << _running_force / cpu_force->_sum_steps << " " 
+                                   << _running_extension / cpu_force->_sum_steps << " " 
+                                   << cpu_force->_sum_steps << std::endl;
+                        _running_force = 0.;
+                        _running_extension = 0.;
+                    } 
+                }
+                outputFile.close();
+                cpu_force->saved_last_step = true; 
+            }
+        }
+    }
 
 public:
 	MD_CUDABackend();

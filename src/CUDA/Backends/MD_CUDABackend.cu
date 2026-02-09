@@ -139,11 +139,24 @@ void MD_CUDABackend::_apply_external_forces_changes() {
 			}
 		}
 
+		_crooks_forces_registry.clear();
 		for(int i = 0; i < N(); i++) {
 			BaseParticle *p = _particles[i];
 
 			if(p->ext_forces.size() > MAX_EXT_FORCES) {
 				throw oxDNAException("On CUDA, the maximum number of external forces that can act on a single particle is %d, particle %d has %d", MAX_EXT_FORCES, i, p->ext_forces.size());
+			}
+
+			
+			for(auto& raw_f_ptr : p->ext_forces) {
+				auto &type = typeid(*raw_f_ptr);
+				if(type == typeid(MovingCrooksTrap) || type == typeid(MutualCrooksTrap) || 
+				type == typeid(CrooksCOMForce) || type == typeid(MovingCrooksCOMForce)) {
+					
+					if(std::find(_crooks_forces_registry.begin(), _crooks_forces_registry.end(), raw_f_ptr) == _crooks_forces_registry.end()) {
+						_crooks_forces_registry.push_back(raw_f_ptr);
+					}
+				}
 			}
 
 			for(uint j = 0; j < p->ext_forces.size(); j++) {
@@ -772,169 +785,33 @@ void MD_CUDABackend::init() {
 }
 
 void MD_CUDABackend::_sync_crooks_data() {
-    if (!_external_forces) return;
+    // If no Crooks forces are registered, exit immediately (O(1) cost)
+    if (_crooks_forces_registry.empty()) return;
 
     llint current = current_step();
     const int buffer_size = 100000;
-	
-    if (current > 1 && current % buffer_size <= 1) {
-		string printed_paths[100];
-        for (int i = 0; i < CONFIG_INFO->N(); i++) {
-            BaseParticle* p = CONFIG_INFO->particles()[i];
-            for (auto cpu_force_ptr : p->ext_forces) {
-				if (typeid(*cpu_force_ptr) == typeid(MovingCrooksTrap)) {
-					MovingCrooksTrap *cpu_force = (MovingCrooksTrap*)cpu_force_ptr;
-					if (current % buffer_size == 1){
-						cpu_force->saved_last_step = false;
-						continue;
-					}
-					if (cpu_force && !cpu_force->saved_last_step) {
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_force_buffer, ((moving_crooks_trap*)cpu_force->cuda_force)->force_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_extension_buffer, ((moving_crooks_trap*)cpu_force->cuda_force)->extension_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						std::ofstream outputFile(cpu_force->_file_path, std::ios::app);
+    
+    // Check timing once at the top
+    if (current <= 1 || current % buffer_size > 1) return;
 
-						if (outputFile.is_open()) {
-							number _running_force = 0.;
-							number _running_extension = 0.;
-							for (int i = 0; i < buffer_size; i++) {
-								_running_force += cpu_force->_single_force_buffer[i];
-								_running_extension += cpu_force->_single_extension_buffer[i];
-								if ((i+1) % (cpu_force->_sum_steps) == 0){
-									outputFile << setprecision(12) << _running_force / cpu_force->_sum_steps << " " << _running_extension / cpu_force->_sum_steps << " " << cpu_force->_sum_steps << std::endl;
-									_running_force = 0.;
-									_running_extension = 0.;
-								} 
-							}
-							outputFile.close();
-						} else {
-							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
-						}
-					}
-				}else if (typeid(*cpu_force_ptr) == typeid(MutualCrooksTrap)) {
-					MutualCrooksTrap *cpu_force = (MutualCrooksTrap*)cpu_force_ptr;
-					if (current % buffer_size == 1){
-						cpu_force->saved_last_step = false;
-						continue;
-					}
-					if (cpu_force && !cpu_force->saved_last_step) {
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_force_buffer, ((mutual_crooks_trap*)cpu_force->cuda_force)->force_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_extension_buffer, ((mutual_crooks_trap*)cpu_force->cuda_force)->extension_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						std::ofstream outputFile(cpu_force->_file_path, std::ios::app);
-
-						if (outputFile.is_open()) {
-							number _running_force = 0.;
-							number _running_extension = 0.;
-							for (int i = 0; i < buffer_size; i++) {
-								_running_force += cpu_force->_single_force_buffer[i];
-								_running_extension += cpu_force->_single_extension_buffer[i];
-								if ((i+1) % (cpu_force->_sum_steps) == 0){
-									outputFile << setprecision(12) << _running_force / cpu_force->_sum_steps << " " << _running_extension / cpu_force->_sum_steps << " " << cpu_force->_sum_steps << std::endl;
-									_running_force = 0.;
-									_running_extension = 0.;
-								} 
-							}
-							outputFile.close();
-						} else {
-							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
-						}
-					}
-				}else if (typeid(*cpu_force_ptr) == typeid(CrooksCOMForce)) {
-					CrooksCOMForce *cpu_force = (CrooksCOMForce*)cpu_force_ptr;
-					string path = cpu_force->_file_path;
-
-					bool _break = false;
-
-					for (int i = 0; i < 100; i++) {
-						if (printed_paths[i] == path) {
-							_break = true;
-							break;
-						}
-						if (printed_paths[i].empty()) {
-							printed_paths[i] = path;
-							break;
-						}
-					}
-					if (_break) break;
-
-					
-					if (current % buffer_size == 1){
-						cpu_force->saved_last_step = false;
-						continue;
-					}
-					if (cpu_force && !cpu_force->saved_last_step) {
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_force_buffer, ((crooks_COM_force*)cpu_force->cuda_force)->force_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_extension_buffer, ((crooks_COM_force*)cpu_force->cuda_force)->extension_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						std::ofstream outputFile(cpu_force->_file_path, std::ios::app);
-
-						if (outputFile.is_open()) {
-							number _running_force = 0.;
-							number _running_extension = 0.;
-							for (int i = 0; i < buffer_size; i++) {
-								_running_force += cpu_force->_single_force_buffer[i];
-								_running_extension += cpu_force->_single_extension_buffer[i];
-								if ((i+1) % (cpu_force->_sum_steps) == 0){
-									outputFile << setprecision(12) << _running_force / cpu_force->_sum_steps << " " << _running_extension / cpu_force->_sum_steps << " " << cpu_force->_sum_steps << std::endl;
-									_running_force = 0.;
-									_running_extension = 0.;
-								} 
-							}
-							outputFile.close();
-						} else {
-							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
-						}
-					}
-				}else if (typeid(*cpu_force_ptr) == typeid(MovingCrooksCOMForce)) {
-
-					MovingCrooksCOMForce *cpu_force = (MovingCrooksCOMForce*)cpu_force_ptr;
-					string path = cpu_force->_file_path;
-
-					bool _break = false;
-
-					for (int i = 0; i < 100; i++) {
-						if (printed_paths[i] == path) {
-							_break = true;
-							break;
-						}
-						if (printed_paths[i].empty()) {
-							printed_paths[i] = path;
-							break;
-						}
-					}
-					if (_break) break;
-
-					
-					if (current % buffer_size == 1){
-						cpu_force->saved_last_step = false;
-						continue;
-					}
-					if (cpu_force && !cpu_force->saved_last_step) {
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_force_buffer, ((Moving_Crooks_COM_force*)cpu_force->cuda_force)->force_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						CUDA_SAFE_CALL(cudaMemcpy(cpu_force->_single_extension_buffer, ((Moving_Crooks_COM_force*)cpu_force->cuda_force)->extension_buffer, sizeof(c_number) * 100000, cudaMemcpyDeviceToHost));
-						std::ofstream outputFile(cpu_force->_file_path, std::ios::app);
-
-						if (outputFile.is_open()) {
-							number _running_force = 0.;
-							number _running_extension = 0.;
-							for (int i = 0; i < buffer_size; i++) {
-								_running_force += cpu_force->_single_force_buffer[i];
-								_running_extension += cpu_force->_single_extension_buffer[i];
-								if ((i+1) % (cpu_force->_sum_steps) == 0){
-									outputFile << setprecision(12) << _running_force / cpu_force->_sum_steps << " " << _running_extension / cpu_force->_sum_steps << " " << cpu_force->_sum_steps << std::endl;
-									_running_force = 0.;
-									_running_extension = 0.;
-								} 
-							}
-							outputFile.close();
-						} else {
-							std::cerr << "Error: Unable to open file '" << cpu_force->_file_path << "' for appending." << std::endl;
-						}
-					}
-				}else{
-					continue;
-				}	
-				
-			}
+    for (BaseForce* force_ptr : _crooks_forces_registry) {
+        // We use dynamic_cast to identify the class and access its buffers
+        
+        if (auto* mct = dynamic_cast<MovingCrooksTrap*>(force_ptr)) {
+            _process_crooks_sync(mct, ((moving_crooks_trap*)mct->cuda_force)->force_buffer, 
+                                 ((moving_crooks_trap*)mct->cuda_force)->extension_buffer, current);
+        }
+        else if (auto* muct = dynamic_cast<MutualCrooksTrap*>(force_ptr)) {
+            _process_crooks_sync(muct, ((mutual_crooks_trap*)muct->cuda_force)->force_buffer, 
+                                 ((mutual_crooks_trap*)muct->cuda_force)->extension_buffer, current);
+        }
+        else if (auto* ccf = dynamic_cast<CrooksCOMForce*>(force_ptr)) {
+            _process_crooks_sync(ccf, ((crooks_COM_force*)ccf->cuda_force)->force_buffer, 
+                                 ((crooks_COM_force*)ccf->cuda_force)->extension_buffer, current);
+        }
+        else if (auto* mccf = dynamic_cast<MovingCrooksCOMForce*>(force_ptr)) {
+            _process_crooks_sync(mccf, ((Moving_Crooks_COM_force*)mccf->cuda_force)->force_buffer, 
+                                 ((Moving_Crooks_COM_force*)mccf->cuda_force)->extension_buffer, current);
         }
     }
 }
-

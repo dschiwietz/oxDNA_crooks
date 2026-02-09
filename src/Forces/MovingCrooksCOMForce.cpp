@@ -26,27 +26,6 @@ MovingCrooksCOMForce::~MovingCrooksCOMForce() {
 
 }
 
-void appendBufferToFile_CrooksCOMForce(const std::string& filename, number* force_buffer, number* extension_buffer, int step) {
-    std::ofstream outputFile(filename, std::ios::app);
-
-    if (outputFile.is_open()) {
-        number _running_force = 0.;
-        number _running_extension = 0.;
-        for (int i = 0; i < 100000; i++) {
-            _running_force += force_buffer[i];
-            _running_extension += extension_buffer[i];
-            if ((i+1) % (step) == 0){
-                outputFile << setprecision(12) << _running_force / step << " " << _running_extension / step << " " << step << std::endl;
-                _running_force = 0.;
-                _running_extension = 0.;
-            } 
-        }
-        outputFile.close();
-    } else {
-        std::cerr << "Error: Unable to open file '" << filename << "' for appending." << std::endl;
-    }
-}
-
 std::tuple<std::vector<int>, std::string> MovingCrooksCOMForce::init(input_file &inp) {
 	BaseForce::init(inp);
 
@@ -116,21 +95,8 @@ LR_vector MovingCrooksCOMForce::value(llint step, LR_vector &pos) {
 	number d_com = dist.module();
 	number force = d_com * _stiff / _com_list.size();
 
-	if (step > last_step) {
-        if (step%100000 == 0 and step != 0 and !saved_last_step) {
-            saved_last_step = true;
-            appendBufferToFile_CrooksCOMForce(_file_path, _force_buffer, _extension_buffer, _sum_steps);
-            for (int i = 0; i < 100000; ++i) {
-                _force_buffer[i] = 0;
-                _extension_buffer[i] = 0;
-            }
-        }else if (step%100000 == 1) {
-            saved_last_step = false;
-        }
-        _force_buffer[step%100000] = force * _com_list.size();
-        _extension_buffer[step%100000] = (_rate * step);
-        last_step = step;
-    } 
+	_force_buffer[step%100000] = force;
+    _extension_buffer[step%100000] = (_rate * step);
 
 	return dist * (force / d_com);
 }

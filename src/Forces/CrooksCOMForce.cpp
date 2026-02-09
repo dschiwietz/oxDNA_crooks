@@ -97,21 +97,8 @@ LR_vector CrooksCOMForce::value(llint step, LR_vector &pos) {
 	number d_com = dist.module();
 	number force = (d_com - (_r0 + _rate * step)) * _stiff / _com_list.size();
 
-	if (step > last_step) {
-        if (step%100000 == 0 and step != 0 and !saved_last_step) {
-            saved_last_step = true;
-            appendBufferToFile_COMForce(_file_path, _force_buffer, _extension_buffer, _sum_steps);
-            for (int i = 0; i < 100000; ++i) {
-                _force_buffer[i] = 0;
-                _extension_buffer[i] = 0;
-            }
-        }else if (step%100000 == 1) {
-            saved_last_step = false;
-        }
-        _force_buffer[step%100000] = force * _com_list.size();
-        _extension_buffer[step%100000] = (_rate * step);
-        last_step = step;
-    } 
+    _force_buffer[step%100000] = force;
+    _extension_buffer[step%100000] = (_rate * step);
 
 	return dist * (force / d_com);
 }

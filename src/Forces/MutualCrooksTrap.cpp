@@ -12,27 +12,6 @@
 
 #include <fstream>   // For std::ofstream
 
-void appendBufferToFile(const std::string& filename, number* force_buffer, number* extension_buffer, int step) {
-    std::ofstream outputFile(filename, std::ios::app);
-
-    if (outputFile.is_open()) {
-        number _running_force = 0.;
-        number _running_extension = 0.;
-        for (int i = 0; i < 100000; i++) {
-            _running_force += force_buffer[i];
-            _running_extension += extension_buffer[i];
-            if ((i+1) % (step) == 0){
-                outputFile << setprecision(12) << _running_force / step << " " << _running_extension / step << " " << step << std::endl;
-                _running_force = 0.;
-                _running_extension = 0.;
-            } 
-        }
-        outputFile.close();
-    } else {
-        std::cerr << "Error: Unable to open file '" << filename << "' for appending." << std::endl;
-    }
-}
-
 
 
 MutualCrooksTrap::MutualCrooksTrap():
@@ -96,22 +75,10 @@ LR_vector MutualCrooksTrap::_distance(LR_vector u, LR_vector v) {
 LR_vector MutualCrooksTrap::value(llint step, LR_vector &pos) {
     LR_vector dr = _distance(pos, CONFIG_INFO->box->get_abs_pos(_p_ptr));
     LR_vector val = (dr / dr.module()) * (dr.module() - (_r0 + (_rate * step))) * (_stiff + (_stiff_rate * step));
+
+    _force_buffer[step%100000] = val * dr/dr.module();
+    _extension_buffer[step%100000] = _r0 + (_rate * step);
     
-    if (step > last_step) {
-        if (step%100000 == 0 and step != 0 and !saved_last_step) {
-            saved_last_step = true;
-            appendBufferToFile(_file_path, _force_buffer, _extension_buffer, _sum_steps);
-            for (int i = 0; i < 100000; ++i) {
-                _force_buffer[i] = 0;
-                _extension_buffer[i] = 0;
-            }
-        }else if (step%100000 == 1) {
-            saved_last_step = false;
-        }
-        _force_buffer[step%100000] = val * dr/dr.module();
-        _extension_buffer[step%100000] = _r0 + (_rate * step);
-        last_step = step;
-    } 
     return val;
 }
 
