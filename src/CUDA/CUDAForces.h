@@ -25,6 +25,7 @@
 #include "../Forces/RepulsiveEllipsoid.h"
 #include "../Forces/YukawaSphere.h"
 #include "../Forces/Metadynamics/LTCOMTrap.h"
+#include "../Forces/Metadynamics/LTCOMAbsPosTrap.h"
 #include "../Forces/AttractionPlane.h"
 #include "../Forces/MovingCrooksTrap.h"
 #include "../Forces/MutualCrooksTrap.h"
@@ -57,6 +58,7 @@
 #define CUDA_COM_FORCE_CROOKS 19
 #define CUDA_MOVING_COM_FORCE 20
 #define CUDA_MOVING_CROOKS_COM_FORCE 21
+#define CUDA_LT_COM_ABS_POS_TRAP 22
 
 
 /**
@@ -550,6 +552,55 @@ void init_LTCOMTrap_from_CPU(lt_com_trap *cuda_force, LTCOMTrap *cpu_force, bool
 }
 
 /**
+ * @brief CUDA version of an LTCOMAbsPosTrap.
+ */
+struct lt_com_abs_pos_trap {
+	int type;
+
+	int p_list_size;
+	int *p_list;
+
+	int axis_index;
+
+	c_number xmin;
+	c_number xmax;
+	int N_grid;
+
+	c_number dX;
+	c_number *potential_grid;
+};
+
+inline void init_LTCOMAbsPosTrap_from_CPU(lt_com_abs_pos_trap *cuda_force, LTCOMAbsPosTrap *cpu_force, bool first_time) {
+	cuda_force->type = CUDA_LT_COM_ABS_POS_TRAP;
+	cuda_force->xmin = cpu_force->xmin;
+	cuda_force->xmax = cpu_force->xmax;
+	cuda_force->N_grid = cpu_force->N_grid;
+	cuda_force->dX = cpu_force->dX;
+	cuda_force->axis_index = cpu_force->_axis_index;
+	cuda_force->p_list_size = cpu_force->_p_list_ptr.size();
+
+	// copy the particle arrays
+	std::vector<int> local_p_list;
+	for(auto particle : cpu_force->_p_list_ptr) {
+		local_p_list.push_back(particle->index);
+	}
+
+	// copy the potential array
+	std::vector<c_number> local_grid;
+	for(auto v : cpu_force->potential_grid) {
+		local_grid.push_back(v);
+	}
+
+	if(first_time) {
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<int>(&cuda_force->p_list, sizeof(int) * local_p_list.size()));
+		CUDA_SAFE_CALL(GpuUtils::LR_cudaMalloc<c_number>(&cuda_force->potential_grid, sizeof(c_number) * local_grid.size()));
+	}
+	CUDA_SAFE_CALL(cudaMemcpy(cuda_force->p_list, local_p_list.data(), sizeof(int) * local_p_list.size(), cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpy(cuda_force->potential_grid, local_grid.data(), sizeof(c_number) * local_grid.size(), cudaMemcpyHostToDevice));
+}
+
+
+/**
  * @brief CUDA version of a YukawaSphere.
  */
 struct Yukawa_sphere {
@@ -771,6 +822,7 @@ union CUDA_trap {
 	crooks_COM_force crookscomforce;
 	Moving_COM_force movingcomforce;
 	Moving_Crooks_COM_force movingcrookscomforce;
+	lt_com_abs_pos_trap ltcomabspostrap;
 };
 
 #endif /* CUDAFORCES_H_ */

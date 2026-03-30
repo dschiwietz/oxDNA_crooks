@@ -499,6 +499,35 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 				}
 				break;
 			}
+			case CUDA_LT_COM_ABS_POS_TRAP: {
+				c_number com_axis = 0.f;
+				
+				// Calculate COM position along the specified axis
+				for(int i = 0; i < extF.ltcomabspostrap.p_list_size; i++) {
+					c_number4 pos = poss[extF.ltcomabspostrap.p_list[i]];
+					if(extF.ltcomabspostrap.axis_index == 0) com_axis += pos.x;
+					else if(extF.ltcomabspostrap.axis_index == 1) com_axis += pos.y;
+					else com_axis += pos.z;
+				}
+				com_axis /= extF.ltcomabspostrap.p_list_size;
+
+				int ix_left = (int) floorf((com_axis - extF.ltcomabspostrap.xmin) / extF.ltcomabspostrap.dX);
+				int ix_right = ix_left + 1;
+
+				c_number meta_F_axis = 0.f;
+				if(ix_left >= 0 && ix_right <= (extF.ltcomabspostrap.N_grid - 1)) {
+					meta_F_axis = -(extF.ltcomabspostrap.potential_grid[ix_right] - extF.ltcomabspostrap.potential_grid[ix_left]) / extF.ltcomabspostrap.dX;
+				}
+
+				// The force is divided equally among all particles in the list
+				c_number F_per_particle = meta_F_axis / extF.ltcomabspostrap.p_list_size;
+
+				if(extF.ltcomabspostrap.axis_index == 0) F.x += F_per_particle;
+				else if(extF.ltcomabspostrap.axis_index == 1) F.y += F_per_particle;
+				else F.z += F_per_particle;
+
+				break;
+			}
 			case CUDA_YUKAWA_SPHERE: {
 				c_number4 centre = make_c_number4(extF.yukawasphere.center.x, extF.yukawasphere.center.y, extF.yukawasphere.center.z, 0.);
 

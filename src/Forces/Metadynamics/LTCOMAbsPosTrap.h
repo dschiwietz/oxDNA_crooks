@@ -26,13 +26,12 @@
  */
 
 class LTCOMAbsPosTrap : public BaseForce {
-private:
+public:
 	std::vector<int> _p_list;
 
 	/// Map from axis string to component index (0,1,2)
 	int _axis_index = 0;
 
-public:
 	std::vector<BaseParticle *> _p_list_ptr;
 
 	number xmin = 0.;
