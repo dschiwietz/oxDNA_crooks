@@ -34,7 +34,7 @@ void COMPosition::init() {
 	}else if (axis == "z"){
 		index = 2;
 	}else{
-		throw oxDNAException("COMPosition: invalid axis %s", axis);
+		throw oxDNAException("COMPosition: invalid axis %s", axis.c_str());
 	}
 	
 

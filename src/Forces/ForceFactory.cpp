@@ -39,6 +39,7 @@
 #include "Metadynamics/LTAtanCOMTrap.h"
 #include "Metadynamics/LTCOMAngleTrap.h"
 #include "Metadynamics/LTCOMTrap.h"
+#include "Metadynamics/LTCOMAbsPosTrap.h"
 
 #include <nlohmann/json.hpp>
 
@@ -99,6 +100,7 @@ void ForceFactory::add_force(input_file &inp, std::vector<BaseParticle *> &parti
 	else if(type_str.compare("meta_2D_com_trap") == 0) extF = std::make_shared<LT2DCOMTrap>();
 	else if(type_str.compare("meta_atan_com_trap") == 0) extF = std::make_shared<LTAtanCOMTrap>();
 	else if(type_str.compare("meta_com_angle_trap") == 0) extF = std::make_shared<LTCOMAngleTrap>();
+	else if(type_str.compare("meta_com_abs_pos_trap") == 0) extF = std::make_shared<LTCOMAbsPosTrap>();
 	else if(type_str.compare("moving_com") == 0) extF = std::make_shared<MovingCOMForce>();
 	else if(type_str.compare("moving_crooks_com") == 0) extF = std::make_shared<MovingCrooksCOMForce>();
 	else throw oxDNAException("Invalid force type `%s\'", type_str.c_str());
