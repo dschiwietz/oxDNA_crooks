@@ -443,7 +443,7 @@ __global__ void set_external_forces(c_number4 *poss, GPU_quat *orientations, CUD
 				c_number4 dr = ref - com;
 				dr.x *= extF.movingcrookscomforce.force_multiplication_vector.x;
 				dr.y *= extF.movingcrookscomforce.force_multiplication_vector.y;
-				dr.y *= extF.movingcrookscomforce.force_multiplication_vector.y;
+				dr.z *= extF.movingcrookscomforce.force_multiplication_vector.z;
 				c_number dr_abs = _module(dr);
 				c_number4 force = dr * extF.movingcrookscomforce.stiff / extF.movingcrookscomforce.n_com;
 
